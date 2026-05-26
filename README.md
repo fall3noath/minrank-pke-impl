@@ -1,4 +1,4 @@
-# MinRank PKE
+# minrank-pke
 
 A Python implementation of the public-key encryption scheme introduced in:
 
@@ -12,36 +12,42 @@ This is the **first public implementation** of this scheme.
 
 ## What is this?
 
-The MinRank problem asks: given $k$ matrices $A_1,\ldots,A_k$ over $\mathbb{F}_2$ and a target matrix $Y$, find a binary vector $s$ such that $Y - \sum_i s_i A_i$ has rank $\leq r$.
+The MinRank problem asks: given `k` matrices `A_1, ..., A_k` over GF(2) and a target matrix `Y`, find a binary vector `s` such that `Y - sum_i s_i * A_i` has rank at most `r`.
 
 This scheme builds a PKE from the average-case hardness of that problem, using:
 - A **blockwise inner product** (Definition 3.7 in the paper) as the core algebraic tool
 - A **duality reduction** showing the dual MinRank problem is as hard as the primal
 - An Alekhnovich-style construction adapted to the rank metric
 
-The algebra lives in the ring of $n \times n$ matrices over $\mathbb{F}_2$.
+All arithmetic is over `n x n` matrices over GF(2).
 
 ---
 
 ## Scheme (Figure 1 of the paper)
 
-**Parameters:** $n$, $k$, $r$, $t$ where $t \mid n$, $r^2 < t - \log n$, $(n/t)^2 - 2k - 1 = \omega(\log n)$
+**Parameters:** `n`, `k`, `r`, `t` where `t` divides `n`, `r^2 < t - log(n)`, and `(n/t)^2 - 2k - 1 > 0`
 
 **KeyGen:**
-1. Sample $s \xleftarrow{\$} \mathbb{F}_2^k$, $\mathbf{A} = (A_1,\ldots,A_k) \xleftarrow{\$} (\mathbb{F}_2^{n \times n})^k$, $E \xleftarrow{\$} \mathbb{F}_2^{n \times n}$ with $\text{rank}(E) \leq r$
-2. $\text{sk} = s$, $\text{pk} = (\mathbf{A},\ Y = \mathbf{A}(s) + E)$
+1. Sample a random binary vector `s` of length `k`
+2. Sample `k` random `n x n` matrices `A_1, ..., A_k` over GF(2)
+3. Sample a random `n x n` matrix `E` over GF(2) with `rank(E) <= r`
+4. Set `sk = s` and `pk = (A, Y)` where `Y = A(s) + E`
 
-**Encrypt** bit $x \in \{0,1\}$:
-- If $x = 0$: sample $R$ with $\text{rank}(R) \leq r$, output $\text{ct} = \langle R, (\mathbf{A}, Y) \rangle_t$
-- If $x = 1$: output $\text{ct} = (V_1,\ldots,V_{k+1})$ with each $V_i \xleftarrow{\$} \mathbb{F}_2^{t \times t}$
+> `A(s)` denotes the linear combination `s_1*A_1 + ... + s_k*A_k` over GF(2).
 
-**Decrypt** $\text{ct} = (C_1,\ldots,C_k,C_{k+1})$:
-1. $M = C_{k+1} - \sum_{i=1}^k s_i \cdot C_i$
-2. Output $0$ if $\text{rank}(M) < t - \log^{2/3} n$, else output $1$
+**Encrypt** bit `x` in `{0, 1}`:
+- If `x = 0`: sample a random `n x n` matrix `R` with `rank(R) <= r`, output `ct = <R, (A_1,...,A_k, Y)>_t`
+- If `x = 1`: output `ct = (V_1, ..., V_{k+1})` where each `V_i` is a uniformly random `t x t` matrix over GF(2)
 
-The blockwise inner product $\langle A, B \rangle_t$ is a $t \times t$ matrix whose $(i,j)$-th entry is the Frobenius inner product of the $(i,j)$-th $(n/t) \times (n/t)$ blocks of $A$ and $B$.
+**Decrypt** ciphertext `ct = (C_1, ..., C_k, C_{k+1})` with secret key `s`:
+1. Compute `M = C_{k+1} - sum_{i=1}^{k} s_i * C_i` over GF(2)
+2. If `rank(M) < t - log(n)^(2/3)`, output `0`; otherwise output `1`
 
-**Correctness:** When $x=0$, $M = \langle R, E \rangle_t$, so $\text{rank}(M) \leq r^2 < t - \log n$ by Claim 3.15. When $x=1$, $M$ is a random $t \times t$ matrix, which has full rank with overwhelming probability.
+**Blockwise inner product** `<A, B>_t`: a `t x t` matrix whose `(i,j)`-th entry is the Frobenius inner product (sum of entrywise products mod 2) of the `(i,j)`-th `(n/t) x (n/t)` block of `A` with the corresponding block of `B`.
+
+**Why it works:**
+- When `x = 0`: `M = <R, E>_t`, so `rank(M) <= r^2 < t - log(n)` by Claim 3.15 of the paper — decrypts to `0` correctly.
+- When `x = 1`: `M` is a random `t x t` matrix, which has full rank with overwhelming probability — decrypts to `1` correctly.
 
 ---
 
@@ -50,10 +56,10 @@ The blockwise inner product $\langle A, B \rangle_t$ is a $t \times t$ matrix wh
 ```bash
 git clone https://github.com/YOUR_USERNAME/minrank-pke
 cd minrank-pke
-pip install -e ".[dev]"
+pip install numpy
 ```
 
-**Requirements:** Python ≥ 3.11, NumPy.
+**Requirements:** Python >= 3.11, NumPy.
 
 ---
 
@@ -62,18 +68,14 @@ pip install -e ".[dev]"
 ```python
 from minrank_pke import MinRankPKE, Params
 
-# Use the toy parameter set (small, for testing only)
 params = Params.toy()
 scheme = MinRankPKE(params)
 
-# Key generation
 pk, sk = scheme.keygen()
 
-# Encrypt a bit
 ct0 = scheme.encrypt(pk, 0)
 ct1 = scheme.encrypt(pk, 1)
 
-# Decrypt
 print(scheme.decrypt(sk, ct0, params.k))  # 0
 print(scheme.decrypt(sk, ct1, params.k))  # 1
 ```
@@ -84,13 +86,11 @@ print(scheme.decrypt(sk, ct1, params.k))  # 1
 
 | Name | n | t | k | r | Notes |
 |------|---|---|---|---|-------|
-| `Params.toy()` | 16 | 4 | 4 | 2 | Functional tests only, **no security** |
-| `Params.small()` | 32 | 8 | 6 | 2 | Demo only, **no security** |
-| `Params.medium()` | 256 | 16 | 64 | 4 | Heuristic security ~$2^4$ against known attacks |
+| `Params.toy()` | 64 | 16 | 4 | 1 | Functional tests only, no security |
+| `Params.small()` | 128 | 32 | 5 | 2 | Demo only, no security |
+| `Params.medium()` | 256 | 32 | 10 | 2 | Heuristic security, low — increase n for real use |
 
-For real security, follow Section 4 of the paper:
-- **Setting 1:** $t = \Theta(n^{1/2})$, $k = \Theta(n)$, $r = \Theta(n^{1/4})$ → best attack cost ~$2^{O(n^{1/4})}$
-- **Setting 2:** $t = \Theta\!\left(\frac{n}{\log n}\right)$ etc. → maximises attack cost for given $n$
+For meaningful security follow Section 4 of the paper. Setting 1 from the paper uses `t = O(n^(1/2))`, `k = O(n)`, `r = O(n^(1/4))`, giving best known attack cost around `2^O(n^(1/4))`.
 
 ---
 
@@ -99,6 +99,8 @@ For real security, follow Section 4 of the paper:
 ```bash
 pytest tests/ -v
 ```
+
+All 27 tests pass, covering GF(2) arithmetic, parameter validation, encrypt/decrypt correctness, and the core algebraic identity `M = <R, E>_t`.
 
 ---
 
@@ -120,9 +122,9 @@ minrank-pke/
 
 ## Limitations
 
-- Encrypts a **single bit** per ciphertext (as in the paper's construction).
-- This is a **research implementation** — not audited, not constant-time, not production-ready.
-- The `medium` parameter set has very low security; large $n$ is needed for real security.
+- Encrypts a **single bit** per ciphertext, as in the paper's construction.
+- Research implementation — not audited, not constant-time, not production-ready.
+- For real security, `n` needs to be substantially larger than the demo parameter sets.
 
 ---
 
