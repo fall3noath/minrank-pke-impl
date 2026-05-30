@@ -44,7 +44,7 @@ print(scheme.decrypt(sk, ct1, params.k))  # 1
 |------|---|---|---|---|-------|
 | `Params.toy()` | 64 | 16 | 4 | 1 | Functional tests only, no security |
 | `Params.small()` | 128 | 32 | 5 | 2 | Demo only, no security |
-| `Params.medium()` | 256 | 32 | 10 | 2 | Heuristic security, low — increase $n$ for real use |
+| `Params.medium()` | 256 | 32 | 10 | 2 | Heuristic security, low; increase $n$ for real use |
 
 For meaningful security follow Section 4 of the paper. Setting 1 uses $t = \Theta(n^{1/2})$, $k = \Theta(n)$, $r = \Theta(n^{1/4})$, giving best known attack cost around $2^{O(n^{1/4})}$.
 
@@ -54,4 +54,4 @@ For meaningful security follow Section 4 of the paper. Setting 1 uses $t = \Thet
 ```bash
 pytest tests/ -v
 ```
-All 27 tests pass, covering GF(2) arithmetic, parameter validation, encrypt/decrypt correctness, and the core algebraic identity `M = <R, E>_t`.
+All 27 tests pass, covering GF(2) arithmetic, parameter validation, encrypt/decrypt correctness, and the core algebraic identity $M = <R, E>_t.$
